@@ -1,5 +1,11 @@
+// ✅ GitHub Pages-safe base path (works whether you're on /oneMonth/ or root)
+const basePath = new URL(".", window.location.href).pathname; // folder containing index.html
+
 // Images: imgs/1.jpg ... imgs/12.jpg
-const imageFiles = Array.from({ length: 12 }, (_, i) => `imgs/${i + 1}.jpg`);
+const imageFiles = Array.from(
+  { length: 12 },
+  (_, i) => `${basePath}imgs/${i + 1}.jpg`
+);
 
 const track = document.getElementById("track");
 const dotsEl = document.getElementById("dots");
@@ -9,7 +15,7 @@ const viewport = document.getElementById("viewport");
 
 let index = 0;
 
-// --- Build slides ---
+// --- Build slides (NO photo-count overlay text) ---
 function buildSlides() {
   track.innerHTML = "";
   dotsEl.innerHTML = "";
@@ -22,6 +28,13 @@ function buildSlides() {
     img.src = src;
     img.alt = "Anniversary photo";
     img.loading = "lazy";
+
+    // If an image 404s, hide it (so one missing file doesn't break the whole slider)
+    img.addEventListener("error", () => {
+      slide.remove();
+      const dot = dotsEl.children[i];
+      if (dot) dot.remove();
+    });
 
     slide.appendChild(img);
     track.appendChild(slide);
@@ -37,8 +50,15 @@ function buildSlides() {
   updateUI();
 }
 
+function slideCount() {
+  return track.children.length;
+}
+
 function goTo(i) {
-  index = (i + imageFiles.length) % imageFiles.length;
+  const n = slideCount();
+  if (!n) return;
+
+  index = (i + n) % n;
   track.style.transform = `translateX(${-index * 100}%)`;
   updateUI();
 }
@@ -84,13 +104,14 @@ viewport.addEventListener(
       if (dx > 0) goTo(index - 1);
       else goTo(index + 1);
     }
+
     startX = null;
     dragging = false;
   },
   { passive: true }
 );
 
-// Optional autoplay (set to 0 to disable)
+// Autoplay off (phone-friendly)
 const autoplayMs = 0;
 let autoplayTimer = null;
 
@@ -99,7 +120,6 @@ function startAutoplay() {
   stopAutoplay();
   autoplayTimer = setInterval(() => goTo(index + 1), autoplayMs);
 }
-
 function stopAutoplay() {
   if (autoplayTimer) clearInterval(autoplayTimer);
   autoplayTimer = null;
@@ -110,7 +130,7 @@ viewport.addEventListener("mouseleave", startAutoplay);
 viewport.addEventListener("touchstart", stopAutoplay, { passive: true });
 viewport.addEventListener("touchend", startAutoplay, { passive: true });
 
-// Floating hearts
+// Floating hearts (kept)
 function spawnHearts() {
   const host = document.querySelector(".floating-hearts");
   if (!host) return;
